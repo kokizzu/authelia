@@ -1,6 +1,6 @@
 ---
-title: "Pangolin"
-description: "Integrating Pangolin with the Authelia OpenID Connect 1.0 Provider."
+title: "Leantime"
+description: "Integrating Leantime with the Authelia OpenID Connect 1.0 Provider."
 summary: ""
 date: 2022-06-15T17:51:47+10:00
 draft: false
@@ -22,8 +22,8 @@ seo:
 
 - [Authelia]
   - [v4.39.4](https://github.com/authelia/authelia/releases/tag/v4.39.4)
-- [Pangolin]
-  - [v1.3.1](https://github.com/fosrl/pangolin/releases/tag/1.3.1)
+- [Leantime]
+  - [v3.5.8](https://github.com/Leantime/leantime/releases/tag/v3.5.8)
 
 {{% oidc-common bugs="claims-hydration" %}}
 
@@ -31,8 +31,9 @@ seo:
 
 This example makes the following assumptions:
 
+- __Application Root URL:__ `https://leantime.{{< sitevar name="domain" nojs="example.com" >}}/`
 - __Authelia Root URL:__ `https://{{< sitevar name="subdomain-authelia" nojs="auth" >}}.{{< sitevar name="domain" nojs="example.com" >}}/`
-- __Client ID:__ `pangolin`
+- __Client ID:__ `leantime`
 - __Client Secret:__ `insecure_secret`
 
 Some of the values presented in this guide can automatically be replaced with documentation variables.
@@ -49,7 +50,7 @@ configuration will likely require configuration of an escape hatch to work aroun
 [Configuration Escape Hatch](#configuration-escape-hatch) for details.
 {{< /callout >}}
 
-The following YAML configuration is an example __Authelia__ [client configuration] for use with [Pangolin] which will
+The following YAML configuration is an example __Authelia__ [client configuration] for use with [Leantime] which will
 operate with the application example:
 
 ```yaml {title="configuration.yml"}
@@ -58,69 +59,72 @@ identity_providers:
     ## The other portions of the mandatory OpenID Connect 1.0 configuration go here.
     ## See: https://www.authelia.com/c/oidc
     clients:
-      - client_id: 'pangolin'
-        client_name: 'Pangolin'
+      - client_id: 'leantime'
+        client_name: 'Leantime'
         client_secret: '$pbkdf2-sha512$310000$c8p78n7pUMln0jzvd4aK4Q$JNRBzwAo0ek5qKn50cFzzvE9RXV88h1wJn5KGiHrD0YKtZaR/nCb2CJPOsKaPK0hjf.9yHxzQGZziziccp6Yng'  # The digest of 'insecure_secret'.
         public: false
         authorization_policy: 'two_factor'
         require_pkce: true
         pkce_challenge_method: 'S256'
         redirect_uris:
-          - '<provided by pangolin>'
+          - 'https://leantime.{{< sitevar name="domain" nojs="example.com" >}}/oidc/callback'
         scopes:
           - 'openid'
-          - 'profile'
+          - 'groups'
           - 'email'
+          - 'profile'
         response_types:
           - 'code'
         grant_types:
           - 'authorization_code'
         access_token_signed_response_alg: 'none'
         userinfo_signed_response_alg: 'none'
-        token_endpoint_auth_method: 'client_secret_basic'
+        token_endpoint_auth_method: 'client_secret_post'
 ```
 
 #### Configuration Escape Hatch
 
-{{% oidc-escape-hatch-claims-hydration client_id="pangolin" %}}
+{{% oidc-escape-hatch-claims-hydration client_id="leantime" claims="email" %}}
 
 ### Application
 
-To configure [Pangolin] there is one method, using the [Web GUI](#web-gui).
+To configure [leantime] there is one method, using the [Environment Variables](#environment-variables).
 
-#### Web GUI
+#### Environment Variables
 
-{{< callout context="caution" title="Important Note" icon="outline/alert-triangle" >}}
-Unless you have a Pangolin licence, you will need to manually create the user in Access Control > Users before attempting login.
-{{< /callout >}}
+To configure [leantime] to utilize Authelia as an [OpenID Connect 1.0] Provider, use the following environment
+variables:
 
-To configure [Pangolin] to utilize Authelia as an [OpenID Connect 1.0] Provider, use the following
-instructions:
+##### Standard
 
-1. Visit your [Pangolin Web GUI]
-2. Visit `Server Admin`
-3. Visit `Identity Providers`
-4. Select `Add Identity Provider`
-5. Select `OpenID Connect`
-6. Configure the following options:
-   - Name: `Authelia`
-   - Provider Type: `OAuth2/OIDC`
-   - Client ID: `pangolin`
-   - Client Secret: `insecure_secret`
-   - Auth URL: `https://{{< sitevar name="subdomain-authelia" nojs="auth" >}}.{{< sitevar name="domain" nojs="example.com" >}}/api/oidc/authorization`
-   - Token URL: `https://{{< sitevar name="subdomain-authelia" nojs="auth" >}}.{{< sitevar name="domain" nojs="example.com" >}}/api/oidc/token`
-   - Identifier Path: `sub`
-   - Email Path: `email`
-   - Name Path: `name`
-   - Scopes: `openid profile email`
-7. Click `Create Identity Provider`.
-8. On page refresh, note the Redirection URL, and enter it into your Authelia config under `redirect_uris`.
+```shell {title=".env"}
+LEAN_OIDC_ENABLE=true
+LEAN_OIDC_CLIENT_ID=leantime
+LEAN_OIDC_CLIENT_SECRET=insecure_secret
+LEAN_OIDC_PROVIDER_URL=https://{{< sitevar name="subdomain-authelia" nojs="auth" >}}.{{< sitevar name="domain" nojs="example.com" >}}
+LEAN_OIDC_CREATE_USER=true
+LEAN_OIDC_DEFAULT_ROLE=20
+```
+
+##### Docker Compose
+
+```yaml {title="compose.yml"}
+services:
+  leantime:
+    environment:
+      LEAN_OIDC_ENABLE: 'true'
+      LEAN_OIDC_CLIENT_ID: 'leantime'
+      LEAN_OIDC_CLIENT_SECRET: 'insecure_secret'
+      LEAN_OIDC_PROVIDER_URL: 'https://{{< sitevar name="subdomain-authelia" nojs="auth" >}}.{{< sitevar name="domain" nojs="example.com" >}}'
+      LEAN_OIDC_CREATE_USER: 'true'
+      LEAN_OIDC_DEFAULT_ROLE: '20'
+```
 
 ## See Also
 
-- [Pangolin OIDC Documentation](https://docs.fossorial.io/Pangolin/Identity%20Providers/configuring-identity-providers)
+- [Leantime OpenID Connect Documentation](https://docs.leantime.io/installation/configuration?id=openid-conenct-oidc-configuration)
 
 [Authelia]: https://www.authelia.com
-[Pangolin]: https://fossorial.io/
+[Leantime]: https://leantime.io/
 [OpenID Connect 1.0]: ../../openid-connect/introduction.md
 [client configuration]: ../../../configuration/identity-providers/openid-connect/clients.md
